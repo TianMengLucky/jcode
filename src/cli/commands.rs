@@ -2540,7 +2540,7 @@ async fn run_single_message_with_agent(
             let text = run_single_message_command_capture_with_auto_poke(agent, message).await?;
             let report = RunCommandReport {
                 session_id: agent.session_id().to_string(),
-                provider: provider.name().to_string(),
+                provider: provider.runtime_display_name(),
                 model: provider.model(),
                 text,
                 usage: agent.last_usage().clone(),
@@ -3000,7 +3000,7 @@ async fn run_single_message_command_ndjson(
         &serde_json::json!({
             "type": "start",
             "session_id": session_id,
-            "provider": provider.name(),
+            "provider": provider.runtime_display_name(),
             "model": provider.model(),
         }),
     )?;
@@ -3144,7 +3144,7 @@ async fn run_single_message_command_ndjson(
                 &serde_json::json!({
                     "type": "done",
                     "session_id": session_id,
-                    "provider": provider.name(),
+                    "provider": provider.runtime_display_name(),
                     "model": provider.model(),
                     "text": state.text,
                     "usage": state.usage,
@@ -3162,7 +3162,7 @@ async fn run_single_message_command_ndjson(
                 &serde_json::json!({
                     "type": "error",
                     "session_id": session_id,
-                    "provider": provider.name(),
+                    "provider": provider.runtime_display_name(),
                     "model": provider.model(),
                     "message": format!("{err:#}"),
                 }),
