@@ -1286,6 +1286,22 @@ impl Registry {
         self.record_mcp_surface(&tools);
     }
 
+    /// Rebuild `mcp_search` with the current `direct: false` server roster.
+    /// Called at MCP registration time and again after connections settle so
+    /// live `instructions` reach the description when a tool snapshot is built
+    /// late (the locked snapshot never re-reads it mid-turn).
+    pub async fn refresh_mcp_search_tool(&self, mcp_manager: Arc<RwLock<crate::mcp::McpManager>>) {
+        let roster = mcp_manager.read().await.search_only_server_roster().await;
+        self.register(
+            "mcp_search".to_string(),
+            Arc::new(
+                mcp::McpSearchTool::with_server_roster(mcp_manager, roster)
+                    .with_registry(self.clone()),
+            ) as Arc<dyn Tool>,
+        )
+        .await;
+    }
+
     /// Remove exact server membership, never a lossy normalized prefix.
     pub async fn unregister_mcp_server(&self, server: &str) -> Vec<String> {
         let mut tools = self.tools.write().await;
@@ -1348,12 +1364,7 @@ impl Registry {
             mcp::McpManagementTool::new(Arc::clone(&mcp_manager)).with_registry(self.clone());
         self.register("mcp".to_string(), Arc::new(mcp_tool) as Arc<dyn Tool>)
             .await;
-        self.register(
-            "mcp_search".to_string(),
-            Arc::new(mcp::McpSearchTool::new(Arc::clone(&mcp_manager)).with_registry(self.clone()))
-                as Arc<dyn Tool>,
-        )
-        .await;
+        self.refresh_mcp_search_tool(Arc::clone(&mcp_manager)).await;
         self.register(
             "mcp_call".to_string(),
             Arc::new(mcp::McpCallTool::new(Arc::clone(&mcp_manager)).with_registry(self.clone()))
@@ -1504,6 +1515,11 @@ impl Registry {
                 }
                 let connected = mcp_manager.read().await.connected_servers().await;
                 registry.refresh_mcp_tools(tools, &connected).await;
+                // Connections settled: rebuild the mcp_search roster so live
+                // `instructions` reach its description for late snapshots.
+                registry
+                    .refresh_mcp_search_tool(Arc::clone(&mcp_manager))
+                    .await;
 
                 // Reconcile the on-disk schema cache with the live schemas so the
                 // next spawn can advertise the up-to-date tools with zero cache
@@ -1541,7 +1557,9 @@ impl Registry {
                     for (server, cfg) in &config_snapshot {
                         if let Some(defs) = live_by_server.get(server) {
                             // Only cache servers that actually exposed tools.
-                            if cache.update(server, cfg, defs.clone()) {
+                            let instructions =
+                                mcp_manager.read().await.server_instructions(server).await;
+                            if cache.update(server, cfg, defs.clone(), instructions) {
                                 dirty = true;
                             }
                         }
