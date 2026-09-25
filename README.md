@@ -943,31 +943,3 @@ Then symlink to your PATH:
 scripts/install_release.sh
 ```
 
-### Uninstall
-
-Removes installed binaries and the launcher but keeps your config, auth, and
-sessions so a clean reinstall picks up where you left off:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/1jehuang/jcode/master/scripts/uninstall.sh | bash -s -- --yes
-```
-
-For a full wipe of everything including config, auth, sessions, logs, and
-memory (useful for recovering from a broken install):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/1jehuang/jcode/master/scripts/uninstall.sh | bash -s -- --purge --yes
-```
-
-Add `--dry-run` to preview what would be removed without deleting anything.
-
-### Platform Support
-
-| Platform | Status |
-|---|---|
-| **Linux** x86_64 / aarch64 | Fully supported |
-| **macOS** Apple Silicon & Intel | Supported |
-| **Windows** x86_64 | Supported (native + WSL2) |
-| **Termux** aarch64 / x86_64 | Supported with `pkg install glibc patchelf` |
-
-</div>
